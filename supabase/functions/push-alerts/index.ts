@@ -247,15 +247,28 @@ async function computeActiveAlerts(
 
 Deno.serve(async () => {
   try {
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@example.com";
+    // Secrets pasted into the dashboard often pick up stray whitespace or
+    // quotes, which web-push rejects — strip them before use.
+    const cleanSecret = (value: string | undefined) =>
+      value?.trim().replace(/^["']|["']$/g, "").trim();
+    const vapidPublicKey = cleanSecret(Deno.env.get("VAPID_PUBLIC_KEY"));
+    const vapidPrivateKey = cleanSecret(Deno.env.get("VAPID_PRIVATE_KEY"));
+    const vapidSubject =
+      cleanSecret(Deno.env.get("VAPID_SUBJECT")) ?? "mailto:admin@example.com";
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       throw new Error("Missing VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY secrets");
     }
 
-    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    try {
+      webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    } catch (error) {
+      // Lengths only (never the keys) so a bad secret is easy to spot:
+      // a valid public key is 87 chars, a valid private key is 43.
+      throw new Error(
+        `Invalid VAPID secrets (public ${vapidPublicKey.length} chars, private ${vapidPrivateKey.length} chars, subject "${vapidSubject}"): ${error}`,
+      );
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -349,7 +362,13 @@ Deno.serve(async () => {
     } else {
       console.error(
         "push-alerts: no device accepted the notification",
-        sendResults.map((result) => (result.status === "rejected" ? String(result.reason) : "ok")),
+        sendResults.map((result, index) => {
+          if (result.status !== "rejected") return "ok";
+          // statusCode/body come from the push service (Apple/Google/Mozilla)
+          // and say exactly why it refused the push.
+          const host = new URL(subscriptions[index].endpoint).host;
+          return `${host} -> ${result.reason?.statusCode ?? "?"} ${result.reason?.body ?? String(result.reason)}`;
+        }),
       );
     }
 

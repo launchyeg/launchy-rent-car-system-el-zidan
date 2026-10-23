@@ -15,17 +15,33 @@ export function isPushSupported() {
   return "serviceWorker" in navigator && "PushManager" in window;
 }
 
+// A subscription is bound to the VAPID public key it was created with. If
+// the key was rotated afterwards, the push service rejects every push
+// (VapidPkHashMismatch), so such a subscription counts as not subscribed.
+function usesCurrentKey(subscription) {
+  const subscribedKey = subscription.options?.applicationServerKey;
+  if (!subscribedKey || !VAPID_PUBLIC_KEY) return false;
+  const current = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  const existing = new Uint8Array(subscribedKey);
+  return (
+    existing.length === current.length &&
+    existing.every((byte, index) => byte === current[index])
+  );
+}
+
 export async function getPushSubscriptionStatus() {
   if (!isPushSupported()) return "unsupported";
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
-  return subscription ? "subscribed" : "unsubscribed";
+  return subscription && usesCurrentKey(subscription)
+    ? "subscribed"
+    : "unsubscribed";
 }
 
 // Requests permission, subscribes via the browser's push service, and
 // stores the subscription in Supabase so push-alerts (the Edge Function)
 // knows where to send to. Safe to call again if already subscribed —
-// just returns the existing subscription instead of creating a new one.
+// reuses the existing subscription unless it was made with an old key.
 export async function enablePushNotifications() {
   if (!isPushSupported()) {
     throw new Error("هذا المتصفح لا يدعم الإشعارات.");
@@ -41,6 +57,10 @@ export async function enablePushNotifications() {
 
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
+  if (subscription && !usesCurrentKey(subscription)) {
+    await subscription.unsubscribe();
+    subscription = null;
+  }
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
