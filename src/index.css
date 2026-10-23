@@ -1,12 +1,5 @@
 @import "tailwindcss";
 
-/*
-  Design tokens for El Zidan Rent Car, expressed as Tailwind v4
-  theme variables. Each --color-name, --font-name, --shadow-name entry below
-  generates matching utilities automatically (e.g. --color-primary becomes
-  bg-primary, text-primary, border-primary). Edit values here to re-theme
-  the whole site.
-*/
 @theme {
   /* El Zidan logo red. */
   --color-primary: #ff403c;
