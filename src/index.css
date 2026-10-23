@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/*
+  Design tokens for El Zidan Rent Car, expressed as Tailwind v4
+  theme variables. Each --color-name, --font-name, --shadow-name entry below
+  generates matching utilities automatically (e.g. --color-primary becomes
+  bg-primary, text-primary, border-primary). Edit values here to re-theme
+  the whole site.
+*/
+@theme {
+  /* El Zidan logo red. */
+  --color-primary: #ff403c;
+  --color-primary-dark: #e62f2b;
+  --color-tag-bg: #fff0ef;
+
+  --color-ink: #0e1116;
+  --color-ink-soft: #5b6270;
+  --color-ink-faint: #8b93a1;
+
+  --color-surface-alt: #f4f5f8;
+  --color-surface-alt-2: #eef0f4;
+  --color-border: #e5e7eb;
+  --color-border-soft: #edeef1;
+
+  --color-dark: #0b0d12;
+  --color-dark-soft: #171a22;
+  --color-dark-border: #2a2e38;
+
+  --font-heading: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+
+  /*
+    Arabic UI font for the admin dashboard only (the public site above
+    stays Latin/LTR). The actual font file is fetched lazily from
+    src/dashboard/dashboard.css, loaded only when the dashboard chunk
+    loads, so this token alone adds no network cost to the public site.
+  */
+  --font-arabic: "Tajawal", "Inter", system-ui, sans-serif;
+
+  --shadow-card: 0 8px 24px rgba(14, 17, 22, 0.06);
+  --shadow-card-hover: 0 16px 40px rgba(14, 17, 22, 0.12);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-white text-ink font-body antialiased;
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent px-5 py-2.5 text-sm font-semibold transition-colors duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+  }
+
+  .btn-outline {
+    @apply border-border bg-transparent text-ink hover:border-primary hover:text-primary;
+  }
+}
